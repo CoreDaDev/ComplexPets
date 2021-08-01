@@ -109,7 +109,7 @@ abstract class PetEntity extends Living {
         if($this->isClosed()) {
             return $hasUpdate;
         }
-        if(!$owner->isOnline() || $owner->isClosed() || !$owner instanceof Player) {
+        if(!$owner instanceof Player || !$owner->isOnline() || $owner->isClosed()) {
             $this->setInvisible();
             return true;
         }
