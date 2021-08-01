@@ -18,6 +18,7 @@
 - Pet inventories
 - Advanced follow AI for pets
 - Converting pets to spawn eggs
+- Change pet's visibilities
 
 ## Issues
 

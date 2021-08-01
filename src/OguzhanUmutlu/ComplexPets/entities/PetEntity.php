@@ -5,6 +5,7 @@ namespace OguzhanUmutlu\ComplexPets\entities;
 use dktapps\pmforms\CustomForm;
 use dktapps\pmforms\CustomFormResponse;
 use dktapps\pmforms\element\Input;
+use dktapps\pmforms\element\Toggle;
 use dktapps\pmforms\MenuForm;
 use dktapps\pmforms\MenuOption;
 use dktapps\pmforms\ModalForm;
@@ -43,6 +44,9 @@ abstract class PetEntity extends Living {
     protected $jumpVelocity = 0.6;
 
     public $riding = false;
+    public $isBaby = false;
+    private $canOwnerSee = true;
+    private $canOthersSee = true;
     public $owner = "";
     /*** @var int */
     private $clientMoveTicks;
@@ -67,7 +71,35 @@ abstract class PetEntity extends Living {
         return $this->inventory;
     }
 
+    /*** @param bool $canOwnerSee */
+    public function setCanOwnerSee(bool $canOwnerSee): void {
+        if($this->getOwner() instanceof Player) {
+            $this->despawnFrom($this->getOwner());
+            if($canOwnerSee)
+                $this->spawnTo($this->getOwner());
+        }
+        $this->canOwnerSee = $canOwnerSee;
+    }
+
+    /*** @param bool $canOthersSee */
+    public function setCanOthersSee(bool $canOthersSee): void {
+        if($canOthersSee) {
+            $this->despawnFromAll();
+            $this->spawnToAll();
+            if(!$this->canOwnerSee && $this->getOwner() instanceof Player)
+                $this->despawnFrom($this->getOwner());
+        } else {
+            foreach ($this->getViewers() as $viewer)
+                if ($viewer->getName() != $this->owner)
+                    $this->despawnFrom($viewer);
+        }
+        $this->canOthersSee = $canOthersSee;
+    }
+
     protected function initEntity(): void {
+        $this->isBaby = $this->namedtag->getByte("isSitting", false);
+        $this->canOwnerSee = $this->namedtag->getByte("canOwnerSee", true);
+        $this->canOthersSee = $this->namedtag->getByte("canOthersSee", true);
         $this->setSitting($this->namedtag->getByte("isSitting", false));
         $this->owner = $this->namedtag->getString("petOwner");
         $this->inventory = new PetInventory($this);
@@ -199,6 +231,7 @@ abstract class PetEntity extends Living {
                     new MenuOption("Set pet's name"),
                     new MenuOption("Open pet's inventory"),
                     new MenuOption("Get pet as spawn egg"),
+                    new MenuOption("Change pet's visibilities"),
                     new MenuOption("Make pet ".[true => "stand up", false => "sit down"][$this->isSitting()]),
                     new MenuOption("Remove pet")
                 ],
@@ -260,10 +293,23 @@ abstract class PetEntity extends Living {
                             } else $player->sendMessage("§c> You don't have enough space in your inventory!");
                             break;
                         case 3:
+                            $player->sendForm(new CustomForm(
+                                "Pet Menu > Change pet's visibilities",
+                                [
+                                    new Toggle("owner", "Can owner see pet?", $this->canOwnerSee),
+                                    new Toggle("others", "Can others see pet?", $this->canOthersSee)
+                                ],
+                                function(Player $player, CustomFormResponse $response): void {
+                                    $this->setCanOwnerSee($response->getBool("owner"));
+                                    $this->setCanOthersSee($response->getBool("others"));
+                                }
+                            ));
+                            break;
+                        case 4:
                             $this->setSitting(!$this->isSitting());
                             $player->sendMessage("§e> Pet is now ".[true => "§c"."sitting down", false => "§a"."standing up"][$this->isSitting()]."§e.");
                             break;
-                        case 4:
+                        case 5:
                             $player->sendForm(new ModalForm(
                                 "Pet Menu > Remove pet",
                                 "You cannot revert this action!\nDo you want to remove pet?",
@@ -300,6 +346,7 @@ abstract class PetEntity extends Living {
 
     public function saveNBT(): void {
         $this->namedtag->setByte("isSitting", $this->isSitting());
+        $this->namedtag->setByte("isBaby", $this->isBaby);
         parent::saveNBT();
     }
 
