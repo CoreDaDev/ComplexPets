@@ -1,0 +1,15 @@
+---
+name: ComplexPets
+version: 1.0.0
+api: 3.0.0
+main: OguzhanUmutlu\ComplexPets\ComplexPets
+
+commands:
+  pets:
+    description: "Pet admin command"
+    permission: complexpets.pets.cmd
+
+permissions:
+  complexpets.pets.cmd:
+    default: op
+...
