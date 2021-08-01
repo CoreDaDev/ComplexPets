@@ -96,8 +96,14 @@ abstract class PetEntity extends Living {
         $this->canOthersSee = $canOthersSee;
     }
 
+    /*** @param bool $isBaby */
+    public function setIsBaby(bool $isBaby): void {
+        $this->isBaby = $isBaby;
+        $this->setGenericFlag(self::DATA_FLAG_BABY, $isBaby);
+    }
+
     protected function initEntity(): void {
-        $this->isBaby = $this->namedtag->getByte("isSitting", false);
+        $this->setIsBaby($this->namedtag->getByte("isSitting", false));
         $this->canOwnerSee = $this->namedtag->getByte("canOwnerSee", true);
         $this->canOthersSee = $this->namedtag->getByte("canOthersSee", true);
         $this->setSitting($this->namedtag->getByte("isSitting", false));
