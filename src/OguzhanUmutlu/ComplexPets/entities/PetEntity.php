@@ -36,6 +36,10 @@ use pocketmine\scheduler\Task;
 use pocketmine\Server;
 
 abstract class PetEntity extends Living {
+    /*** @var PetEntity[] */
+    public static $riders = [];
+    public $riderYaw = 0;
+
     protected $jumpVelocity = 0.6;
 
     public $riding = false;
@@ -82,14 +86,21 @@ abstract class PetEntity extends Living {
         parent::initEntity();
     }
 
-    private function onRiderMount(Entity $entity) : void {
+    private function onRiderMount(Player $entity) : void {
         $entity->getDataPropertyManager()->setByte(self::DATA_RIDER_ROTATION_LOCKED, 1);
+        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MAX_ROTATION, 90.0);
+        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MIN_ROTATION, 0.0);
+        $entity->getDataPropertyManager()->setVector3(self::DATA_RIDER_SEAT_POSITION, new Vector3(0, 2, 0));
         $this->riding = true;
+        self::$riders[$entity->getName()] = $this;
     }
 
-    public function onRiderLeave(Entity $entity) : void {
+    public function onRiderLeave(Player $entity) : void {
         $entity->getDataPropertyManager()->setByte(self::DATA_RIDER_ROTATION_LOCKED, 0);
+        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MAX_ROTATION, 360.0);
+        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MIN_ROTATION, 0.0);
         $this->riding = false;
+        unset(self::$riders[$entity->getName()]);
     }
 
     public function linkPlayerToPet(Player $player = null, int $type = EntityLink::TYPE_RIDER) : void{
@@ -119,13 +130,6 @@ abstract class PetEntity extends Living {
         if($this->ticksLived % 100 == 0 && $this->riding)
             $this->linkPlayerToPet($this->getOwner());
         if($this->riding) {
-            if($this->clientMoveTicks > 10) {
-                $newPos = $this->add($this->getOwner()->add(0, $this->getOwner()->eyeHeight));
-                $newYaw = $this->yaw + ($this->getOwner()->yaw - $this->yaw) / $this->clientMoveTicks;
-                $newPitch = $this->pitch + ($this->getOwner()->pitch - $this->pitch) / $this->clientMoveTicks;
-                $this->setPositionAndRotation($newPos, $newYaw, $newPitch);
-            } else $this->clientMoveTicks++;
-            $this->lookAt($this->getOwner()->getDirectionVector());
             return $hasUpdate;
         }
         if($this->level->getId() == $owner->level->getId()) {
@@ -170,6 +174,12 @@ abstract class PetEntity extends Living {
         $this->inventory->clearAll();
         foreach($this->inventory->menus as $menu)
             $menu->getInventory()->clearAll();
+        $owner = $this->getOwner();
+        if($owner instanceof Player && !$owner->isClosed() && $owner->isOnline() && isset(self::$riders[$owner->getName()])) {
+            $pet = self::$riders[$owner->getName()];
+            if($pet->getId() == $this->getId())
+                unset(self::$riders[$owner->getName()]);
+        }
         parent::close();
     }
 

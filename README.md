@@ -9,10 +9,6 @@
 
 - Simply type /pets and summon your favorite animal!
 
-## TODO
-
-- Fix riding
-
 ## Features
 
 - No database
