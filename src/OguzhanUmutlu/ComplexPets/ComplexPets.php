@@ -11,6 +11,7 @@ use OguzhanUmutlu\ComplexPets\entities\PetEntity;
 use OguzhanUmutlu\ComplexPets\entities\PetNBT;
 use OguzhanUmutlu\ComplexPets\entities\types\DogPet;
 use OguzhanUmutlu\ComplexPets\entities\types\WolfPet;
+use OguzhanUmutlu\ComplexPets\entities\types\ParrotPet;
 use OguzhanUmutlu\ComplexPets\listener\EventListener;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
