@@ -12,4 +12,8 @@ commands:
 permissions:
   complexpets.pets.cmd:
     default: op
+  complexpets.pets.cmd.wolf:
+    default: op
+  complexpets.pets.cmd.dog:
+    default: op
 ...

@@ -16,6 +16,7 @@ use muqsit\invmenu\transaction\InvMenuTransaction;
 use OguzhanUmutlu\ComplexPets\ComplexPets;
 use OguzhanUmutlu\ComplexPets\inventory\PetInventory;
 use OguzhanUmutlu\ComplexPets\items\CustomSpawnEgg;
+use OguzhanUmutlu\ComplexPets\tasks\PetInventoryTask;
 use pocketmine\block\Block;
 use pocketmine\block\Liquid;
 use pocketmine\block\Solid;
@@ -33,7 +34,6 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\SetActorLinkPacket;
 use pocketmine\network\mcpe\protocol\types\EntityLink;
 use pocketmine\Player;
-use pocketmine\scheduler\Task;
 use pocketmine\Server;
 
 abstract class PetEntity extends Living {
@@ -47,9 +47,9 @@ abstract class PetEntity extends Living {
     public $isBaby = false;
     private $canOwnerSee = true;
     private $canOthersSee = true;
+    private $tamed = false;
+    private $rideable = true;
     public $owner = "";
-    /*** @var int */
-    private $clientMoveTicks;
 
     public function getOwner(): ?Player {
         return Server::getInstance()->getPlayerExact($this->owner);
@@ -59,8 +59,19 @@ abstract class PetEntity extends Living {
         return $this->getDataFlag(self::DATA_FLAGS, self::DATA_FLAG_SITTING);
     }
 
-    public function setSitting(bool $value): void {
+    public function setSitting(bool $value = true): void {
         $this->setDataFlag(self::DATA_FLAGS, self::DATA_FLAG_SITTING, $value);
+    }
+
+    /*** @param bool $tamed */
+    public function setTamed(bool $tamed = true): void {
+        $this->tamed = $tamed;
+        $this->setDataFlag(self::DATA_FLAGS, self::DATA_FLAG_TAMED, $tamed);
+    }
+
+    /*** @param bool $rideable */
+    public function setRideable(bool $rideable): void {
+        $this->rideable = $rideable;
     }
 
     /*** @var PetInventory */
@@ -103,7 +114,9 @@ abstract class PetEntity extends Living {
     }
 
     protected function initEntity(): void {
-        $this->setIsBaby($this->namedtag->getByte("isSitting", false));
+        $this->setRideable($this->namedtag->getByte("isRideable", true));
+        $this->setTamed($this->namedtag->getByte("isTamed", false));
+        $this->setIsBaby($this->namedtag->getByte("isBaby", false));
         $this->canOwnerSee = $this->namedtag->getByte("canOwnerSee", true);
         $this->canOthersSee = $this->namedtag->getByte("canOthersSee", true);
         $this->setSitting($this->namedtag->getByte("isSitting", false));
@@ -259,23 +272,7 @@ abstract class PetEntity extends Living {
                             $id = count($this->inventory->menus);
                             $menu = InvMenu::create(InvMenu::TYPE_CHEST);
                             $menu->setListener(function (InvMenuTransaction $transaction) use ($menu) {
-                                ComplexPets::$instance->getScheduler()->scheduleDelayedTask(new class($menu, $this) extends Task {
-                                    public $menu;
-                                    public $entity;
-
-                                    public function __construct(InvMenu $menu, PetEntity $entity) {
-                                        $this->menu = $menu;
-                                        $this->entity = $entity;
-                                    }
-
-                                    public function onRun(int $currentTick) {
-                                        $menu = $this->menu;
-                                        $entity = $this->entity;
-                                        if ($entity->inventory->lastTick == Server::getInstance()->getTick()) {
-                                            ComplexPets::$instance->getScheduler()->scheduleDelayedTask(new self($menu, $entity), 1);
-                                        } else $entity->getInventory()->setContents($menu->getInventory()->getContents());
-                                    }
-                                }, 1);
+                                ComplexPets::$instance->getScheduler()->scheduleDelayedTask(new PetInventoryTask($menu, $this), 1);
                                 return $transaction->continue();
                             })
                                 ->setInventoryCloseListener(function (Player $player, InvMenuInventory $inventory) use ($id) {
@@ -303,13 +300,15 @@ abstract class PetEntity extends Living {
                                     new Toggle("owner", "Can owner see pet?", $this->canOwnerSee),
                                     new Toggle("others", "Can others see pet?", $this->canOthersSee),
                                     new Toggle("sit", "Is pet sitting down?", $this->isSitting()),
-                                    new Toggle("baby", "Is pet baby?", $this->isBaby)
+                                    new Toggle("baby", "Is pet baby?", $this->isBaby),
+                                    new Toggle("rideable", "Is pet rideable?", $this->rideable)
                                 ],
                                 function(Player $player, CustomFormResponse $response): void {
                                     $this->setCanOwnerSee($response->getBool("owner"));
                                     $this->setCanOthersSee($response->getBool("others"));
                                     $this->setSitting($response->getBool("sit"));
                                     $this->setIsBaby($response->getBool("baby"));
+                                    $this->setRideable($response->getBool("isRideable"));
                                     $player->sendMessage("§a> Settings saved!");
                                 }
                             ));
@@ -352,6 +351,8 @@ abstract class PetEntity extends Living {
     public function saveNBT(): void {
         $this->namedtag->setByte("isSitting", $this->isSitting());
         $this->namedtag->setByte("isBaby", $this->isBaby);
+        $this->namedtag->setByte("isTamed", $this->tamed);
+        $this->namedtag->setByte("isRideable", $this->rideable);
         parent::saveNBT();
     }
 

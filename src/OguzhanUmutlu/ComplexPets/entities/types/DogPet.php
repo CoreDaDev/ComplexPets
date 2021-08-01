@@ -10,7 +10,7 @@ class DogPet extends PetEntity {
     public $height = 0.5;
 
     protected function initEntity(): void {
-        $this->setDataFlag(self::DATA_FLAGS, self::DATA_FLAG_TAMED);
+        $this->setTamed();
         parent::initEntity();
     }
 
