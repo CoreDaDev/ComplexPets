@@ -12,6 +12,7 @@
 ## Features
 
 - No database
+- Pet riding! **NEW**
 - Pets can sit
 - Custom pet names
 - Pet inventories
