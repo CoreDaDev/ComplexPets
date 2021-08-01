@@ -40,7 +40,8 @@ class ComplexPets extends PluginBase {
             "permission" => "parrot"
              
          
-    ];
+       ]];
+
     private static $pets = [];
     public function onEnable() {
         self::$instance = $this;
