@@ -11,8 +11,6 @@ use pocketmine\network\mcpe\protocol\types\inventory\UseItemOnEntityTransactionD
 
 class EventListener implements Listener {
     public function onRightClickEntity(DataPacketReceiveEvent $event) {
-        // TODO: fix riding
-        return;
         $pk = $event->getPacket();
         $player = $event->getPlayer();
         if($pk instanceof InteractPacket && $pk->action == InteractPacket::ACTION_LEAVE_VEHICLE) {

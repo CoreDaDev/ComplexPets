@@ -82,17 +82,13 @@ abstract class PetEntity extends Living {
         parent::initEntity();
     }
 
-    private function onRiderMount(Entity $entity) : void{
+    private function onRiderMount(Entity $entity) : void {
         $entity->getDataPropertyManager()->setByte(self::DATA_RIDER_ROTATION_LOCKED, 1);
-        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MAX_ROTATION, 90.0);
-        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MIN_ROTATION, 0.0);
         $this->riding = true;
     }
 
-    public function onRiderLeave(Entity $entity) : void{
+    public function onRiderLeave(Entity $entity) : void {
         $entity->getDataPropertyManager()->setByte(self::DATA_RIDER_ROTATION_LOCKED, 0);
-        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MAX_ROTATION, 360.0);
-        $entity->getDataPropertyManager()->setFloat(self::DATA_RIDER_MIN_ROTATION, 0.0);
         $this->riding = false;
     }
 
@@ -110,10 +106,14 @@ abstract class PetEntity extends Living {
     public function onUpdate(int $currentTick): bool {
         $owner = $this->getOwner();
         $hasUpdate = parent::onUpdate($currentTick);
-        if(!$owner instanceof Player || $this->isClosed() || !$owner->isOnline() || $owner->isClosed()) {
-            $this->flagForDespawn();
+        if($this->isClosed()) {
             return $hasUpdate;
         }
+        if(!$owner->isOnline() || $owner->isClosed() || !$owner instanceof Player) {
+            $this->setInvisible();
+            return true;
+        }
+        $this->setInvisible(false);
         if($this->riding && !$this->getOwner() instanceof Player || $this->getOwner()->isClosed())
             $this->riding = false;
         if($this->ticksLived % 100 == 0 && $this->riding)
@@ -133,9 +133,9 @@ abstract class PetEntity extends Living {
                 $this->teleport($owner);
             else {
                 $this->lookAt($owner->add(0, $owner->eyeHeight/2));
-                if($this->distance($owner) < 1.8)
+                if($this->distance($owner) < 1.8 || $this->isSitting())
                     return $hasUpdate;
-                $direction = $this->getDirectionVector()->multiply(0.1);
+                $direction = $this->getDirectionVector()->multiply($this->isUnderwater() ? 0.1 : 0.2);
                 $firstBlock = $this->getTargetBlockCopy($this->yaw, 0, 0.5, 1.5);
                 $secondBlock = $this->getTargetBlockCopy($this->yaw, 0, 1.5, 1.5);
                 if($firstBlock instanceof Solid && $secondBlock instanceof Solid)
@@ -143,10 +143,15 @@ abstract class PetEntity extends Living {
                 if(!$secondBlock instanceof Solid && $firstBlock instanceof Solid)
                     $this->jump();
                 if($this->getOwner()->y > $this->y && $this->isUnderwater()) {
-                    if($this->swimTicks >= 15) {
-                        // TODO: if underwater more motion if +1 y is not water increase ticks and motion
-                        $this->setMotion(new Vector3(0, 0.1, 0));
-                    } else $this->swimTicks++;
+                    if($this->level->getBlock($this->add(0, 1)) instanceof Liquid) {
+                        if($this->swimTicks >= 15)
+                            $this->setMotion(new Vector3(0, 0.1, 0));
+                        else $this->swimTicks++;
+                    } else {
+                        if($this->swimTicks >= 25)
+                            $this->setMotion(new Vector3(0, 0.3, 0));
+                        else $this->swimTicks++;
+                    }
                 }
                 $this->move($direction->x, 0, $direction->z);
             }
@@ -184,6 +189,7 @@ abstract class PetEntity extends Living {
                     new MenuOption("Set pet's name"),
                     new MenuOption("Open pet's inventory"),
                     new MenuOption("Get pet as spawn egg"),
+                    new MenuOption("Make pet ".[true => "stand up", false => "sit down"][$this->isSitting()]),
                     new MenuOption("Remove pet")
                 ],
                 function(Player $player, int $response): void {
@@ -198,7 +204,7 @@ abstract class PetEntity extends Living {
                                 function(Player $player, CustomFormResponse $response): void {
                                     $this->namedtag->setString("petName", $response->getString("name"));
                                     $this->setNameTag("§e".$this->namedtag->getString("petName", "Pet")."\n§aPet owner: ".$this->owner);
-                                    $player->sendMessage("§aPet's name changed");
+                                    $player->sendMessage("§a> Pet's name changed");
                                 }
                             ));
                             break;
@@ -244,6 +250,10 @@ abstract class PetEntity extends Living {
                             } else $player->sendMessage("§c> You don't have enough space in your inventory!");
                             break;
                         case 3:
+                            $this->setSitting(!$this->isSitting());
+                            $player->sendMessage("§e> Pet is now ".[true => "§c"."sitting down", false => "§a"."standing up"][$this->isSitting()]."§e.");
+                            break;
+                        case 4:
                             $player->sendForm(new ModalForm(
                                 "Pet Menu > Remove pet",
                                 "You cannot revert this action!\nDo you want to remove pet?",
