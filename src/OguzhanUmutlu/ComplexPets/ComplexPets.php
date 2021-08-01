@@ -33,7 +33,13 @@ class ComplexPets extends PluginBase {
             "class" => DogPet::class,
             "UiName" => "Dog",
             "permission" => "dog"
-        ]
+        ],
+        "ParrotPet" => [
+            "class" => ParrotPet::class,
+            "UiName" => "Parrot",
+            "permission" => "parrot"
+             
+         
     ];
     private static $pets = [];
     public function onEnable() {
