@@ -6,7 +6,6 @@ use OguzhanUmutlu\ComplexPets\entities\PetEntity;
 use pocketmine\block\Solid;
 use pocketmine\event\Listener;
 use pocketmine\event\server\DataPacketReceiveEvent;
-use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\InteractPacket;
 use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;

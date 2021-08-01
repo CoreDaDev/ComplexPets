@@ -167,9 +167,8 @@ abstract class PetEntity extends Living {
             $this->riding = false;
         if($this->ticksLived % 100 == 0 && $this->riding)
             $this->linkPlayerToPet($this->getOwner());
-        if($this->riding) {
+        if($this->riding)
             return $hasUpdate;
-        }
         if($this->level->getId() == $owner->level->getId()) {
             if($this->distance($owner) > 15 && $this->getOwner()->isOnGround())
                 $this->teleport($owner);
@@ -237,8 +236,7 @@ abstract class PetEntity extends Living {
                     new MenuOption("Set pet's name"),
                     new MenuOption("Open pet's inventory"),
                     new MenuOption("Get pet as spawn egg"),
-                    new MenuOption("Change pet's visibilities"),
-                    new MenuOption("Make pet ".[true => "stand up", false => "sit down"][$this->isSitting()]),
+                    new MenuOption("Pet settings"),
                     new MenuOption("Remove pet")
                 ],
                 function(Player $player, int $response): void {
@@ -303,19 +301,20 @@ abstract class PetEntity extends Living {
                                 "Pet Menu > Change pet's visibilities",
                                 [
                                     new Toggle("owner", "Can owner see pet?", $this->canOwnerSee),
-                                    new Toggle("others", "Can others see pet?", $this->canOthersSee)
+                                    new Toggle("others", "Can others see pet?", $this->canOthersSee),
+                                    new Toggle("sit", "Is pet sitting down?", $this->isSitting()),
+                                    new Toggle("baby", "Is pet baby?", $this->isBaby)
                                 ],
                                 function(Player $player, CustomFormResponse $response): void {
                                     $this->setCanOwnerSee($response->getBool("owner"));
                                     $this->setCanOthersSee($response->getBool("others"));
+                                    $this->setSitting($response->getBool("sit"));
+                                    $this->setIsBaby($response->getBool("baby"));
+                                    $player->sendMessage("§a> Settings saved!");
                                 }
                             ));
                             break;
                         case 4:
-                            $this->setSitting(!$this->isSitting());
-                            $player->sendMessage("§e> Pet is now ".[true => "§c"."sitting down", false => "§a"."standing up"][$this->isSitting()]."§e.");
-                            break;
-                        case 5:
                             $player->sendForm(new ModalForm(
                                 "Pet Menu > Remove pet",
                                 "You cannot revert this action!\nDo you want to remove pet?",
